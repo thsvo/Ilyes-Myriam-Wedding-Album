@@ -6,12 +6,6 @@
     "section": "section1"
   },
   {
-    "id": "c07994d5-8399-429a-8b06-3ee7d6fde376",
-    "name": "stone-tower-winery-wedding-photos_0037.jpg",
-    "url": "/uploads/ac466aff-abe9-4334-98c1-2fa2daf5d913-stone-tower-winery-wedding-photos_0037.jpg",
-    "section": "section2"
-  },
-  {
     "id": "5247796b-522b-440e-89aa-65137be0946e",
     "name": "stone-tower-winery-wedding-photos_0089.jpg",
     "url": "/uploads/e630253e-73a4-445c-98b4-e54a76087455-stone-tower-winery-wedding-photos_0089.jpg",
@@ -39,6 +33,12 @@
     "id": "3216e1c0-22e5-496c-9e92-29dce9c73424",
     "name": "the-barn-at-gravers-tree-farm-wedding-photos-1.jpg",
     "url": "/uploads/f88901c2-486f-4fca-8279-b1398c387faa-the-barn-at-gravers-tree-farm-wedding-photos-1.jpg",
+    "section": "section1"
+  },
+  {
+    "id": "fe7e6361-6dad-4da3-b053-ea3e32d24dc1",
+    "name": "Northfield_Wedding_Red_Barn_Farm_0054.jpg",
+    "url": "/uploads/f9697310-1225-4331-af89-c1488feeb792-Northfield_Wedding_Red_Barn_Farm_0054.jpg",
     "section": "section1"
   }
 ]

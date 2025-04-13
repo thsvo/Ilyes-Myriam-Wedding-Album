@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { writeFile, readFile, mkdir, access } from 'fs/promises'
+import { writeFile, readFile, mkdir, access, constants } from 'fs/promises'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -14,19 +14,34 @@ export async function POST(request: Request) {
     const uploadsDir = path.join(publicDir, 'uploads')
     const photosPath = path.join(publicDir, 'photos.json')
 
+    console.log('Directories:', { publicDir, uploadsDir, photosPath })
+
     // Ensure directories exist with proper permissions
     try {
       // Check if directories exist and are writable
-      await Promise.all([
-        access(publicDir, require('fs').constants.W_OK),
-        access(uploadsDir, require('fs').constants.W_OK)
-      ]).catch(async () => {
-        // If directories don't exist or aren't writable, try to create them
-        await mkdir(uploadsDir, { recursive: true, mode: 0o755 })
-      })
+      try {
+        await access(publicDir, constants.W_OK)
+        console.log('Public directory exists and is writable')
+      } catch (err) {
+        console.log('Public directory issue:', err)
+        await mkdir(publicDir, { recursive: true })
+        console.log('Created public directory')
+      }
+      
+      try {
+        await access(uploadsDir, constants.W_OK)
+        console.log('Uploads directory exists and is writable')
+      } catch (err) {
+        console.log('Uploads directory issue:', err)
+        await mkdir(uploadsDir, { recursive: true })
+        console.log('Created uploads directory')
+      }
     } catch (error) {
       console.error('Directory access/creation error:', error)
-      throw new Error('Server configuration error: Unable to access upload directory')
+      return NextResponse.json({ 
+        error: 'Server configuration error: Unable to access upload directory',
+        details: error
+      }, { status: 500 })
     }
 
     // Initialize or read photos.json with proper error handling
@@ -35,13 +50,19 @@ export async function POST(request: Request) {
       try {
         const photosData = await readFile(photosPath, 'utf-8')
         existingPhotos = JSON.parse(photosData || '[]')
+        console.log('Successfully read photos.json')
       } catch (readError) {
-        // If file doesn't exist, create it with proper permissions
-        await writeFile(photosPath, '[]', { mode: 0o644, encoding: 'utf-8' })
+        console.log('photos.json read error (creating new file):', readError)
+        // If file doesn't exist, create it with empty array
+        await writeFile(photosPath, '[]', { encoding: 'utf-8' })
+        console.log('Created new photos.json file')
       }
     } catch (error) {
       console.error('Photos.json handling error:', error)
-      throw new Error('Server configuration error: Unable to manage photos database')
+      return NextResponse.json({ 
+        error: 'Server configuration error: Unable to manage photos database',
+        details: error
+      }, { status: 500 })
     }
 
     // Process each uploaded file with better error handling
@@ -74,12 +95,15 @@ export async function POST(request: Request) {
     try {
       const updatedPhotos = [...existingPhotos, ...uploadedPhotos]
       await writeFile(photosPath, JSON.stringify(updatedPhotos, null, 2), { 
-        mode: 0o644, 
         encoding: 'utf-8' 
       })
+      console.log('Successfully updated photos.json')
     } catch (error) {
       console.error('Error updating photos database:', error)
-      throw new Error('Server error: Unable to update photos database')
+      return NextResponse.json({ 
+        error: 'Server error: Unable to update photos database',
+        details: error
+      }, { status: 500 })
     }
 
     return NextResponse.json({ 
@@ -92,7 +116,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { 
         error: error instanceof Error ? error.message : 'Failed to upload photos',
-        details: process.env.NODE_ENV === 'development' ? error : undefined
+        details: process.env.NODE_ENV === 'production' ? error : undefined
       },
       { status: 500 }
     )
