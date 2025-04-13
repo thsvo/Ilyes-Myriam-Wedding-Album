@@ -9,32 +9,41 @@ export async function POST(request: Request) {
     const section = formData.get('section') as string
     const uploadedPhotos = []
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads')
+    // Ensure paths are absolute and use correct separators
+    const publicDir = path.join(process.cwd(), 'public')
+    const uploadsDir = path.join(publicDir, 'uploads')
+    const photosPath = path.join(publicDir, 'photos.json')
+
+    // Create directories if they don't exist
+    try {
+      await access(publicDir)
+    } catch {
+      await mkdir(publicDir, { recursive: true })
+    }
+
     try {
       await access(uploadsDir)
     } catch {
       await mkdir(uploadsDir, { recursive: true })
     }
 
-    // Read existing photos
-    const photosPath = path.join(process.cwd(), 'public', 'photos.json')
+    // Initialize or read photos.json
     let existingPhotos = []
     try {
       const photosData = await readFile(photosPath, 'utf-8')
-      existingPhotos = JSON.parse(photosData)
+      existingPhotos = photosData ? JSON.parse(photosData) : []
     } catch {
-      // If file doesn't exist, we'll create it
+      await writeFile(photosPath, '[]', 'utf-8')
     }
 
     // Process each uploaded file
     for (const [key, value] of formData.entries()) {
       if (key.startsWith('file-') && value instanceof Blob) {
         const file = value as File
-        const fileName = `${uuidv4()}-${file.name}`
+        const fileName = `${uuidv4()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
         const filePath = path.join(uploadsDir, fileName)
         
-        // Save file to uploads directory
+        // Save file
         const buffer = Buffer.from(await file.arrayBuffer())
         await writeFile(filePath, buffer)
 
@@ -50,7 +59,7 @@ export async function POST(request: Request) {
 
     // Update photos.json
     const updatedPhotos = [...existingPhotos, ...uploadedPhotos]
-    await writeFile(photosPath, JSON.stringify(updatedPhotos, null, 2))
+    await writeFile(photosPath, JSON.stringify(updatedPhotos, null, 2), 'utf-8')
 
     return NextResponse.json({ 
       success: true, 
