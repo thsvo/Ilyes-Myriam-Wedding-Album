@@ -32,8 +32,8 @@ export default function Home() {
         const data = await response.json()
         
         // Filter photos by section
-        setSection1Photos(data.photos.filter(photo => photo.section === 'section1'))
-        setSection2Photos(data.photos.filter(photo => photo.section === 'section2'))
+        setSection1Photos(data.photos.filter((photo: { section: string }) => photo.section === 'section1'))
+        setSection2Photos(data.photos.filter((photo: { section: string }) => photo.section === 'section2'))
       } else {
         console.error('Error fetching photos:', await response.text())
         toast({
@@ -60,7 +60,7 @@ export default function Home() {
   }
 
   // Function to chunk photos into groups of 3 for the carousel
-  const chunkPhotos = (photos, size = 3) => {
+  const chunkPhotos = (photos: any[], size = 3) => {
     const chunks = []
     for (let i = 0; i < photos.length; i += size) {
       chunks.push(photos.slice(i, i + size))
