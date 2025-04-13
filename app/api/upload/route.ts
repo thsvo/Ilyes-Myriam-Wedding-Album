@@ -14,50 +14,49 @@ export async function POST(request: Request) {
     const uploadsDir = path.join(publicDir, 'uploads')
     const photosPath = path.join(publicDir, 'photos.json')
 
-    // Create directories if they don't exist
+    // Ensure directories exist with proper permissions
     try {
-      await access(publicDir)
-    } catch {
-      await mkdir(publicDir, { recursive: true })
+      // Check if directories exist and are writable
+      await Promise.all([
+        access(publicDir, require('fs').constants.W_OK),
+        access(uploadsDir, require('fs').constants.W_OK)
+      ]).catch(async () => {
+        // If directories don't exist or aren't writable, try to create them
+        await mkdir(uploadsDir, { recursive: true, mode: 0o755 })
+      })
+    } catch (error) {
+      console.error('Directory access/creation error:', error)
+      throw new Error('Server configuration error: Unable to access upload directory')
     }
 
-    try {
-      await access(uploadsDir)
-    } catch {
-      await mkdir(uploadsDir, { recursive: true })
-    }
-
-    // Initialize or read photos.json
+    // Initialize or read photos.json with proper error handling
     let existingPhotos = []
     try {
-      const photosData = await readFile(photosPath, 'utf-8')
-      existingPhotos = photosData ? JSON.parse(photosData) : []
-    } catch (error) {
-      console.error('Error reading photos.json:', error)
-      // If file doesn't exist or is empty, create it
       try {
-        await writeFile(photosPath, '[]', 'utf-8')
-      } catch (writeError) {
-        console.error('Error creating photos.json:', writeError)
-        throw new Error('Failed to initialize photos.json')
+        const photosData = await readFile(photosPath, 'utf-8')
+        existingPhotos = JSON.parse(photosData || '[]')
+      } catch (readError) {
+        // If file doesn't exist, create it with proper permissions
+        await writeFile(photosPath, '[]', { mode: 0o644, encoding: 'utf-8' })
       }
+    } catch (error) {
+      console.error('Photos.json handling error:', error)
+      throw new Error('Server configuration error: Unable to manage photos database')
     }
 
-    // Process each uploaded file
+    // Process each uploaded file with better error handling
     for (const [key, value] of formData.entries()) {
       if (key.startsWith('file-') && value instanceof Blob) {
         const file = value as File
-        // Sanitize filename to avoid path traversal and special characters
         const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
         const fileName = `${uuidv4()}-${safeFileName}`
         const filePath = path.join(uploadsDir, fileName)
         
         try {
-          // Save file to uploads directory
+          // Save file with proper permissions
           const buffer = Buffer.from(await file.arrayBuffer())
-          await writeFile(filePath, buffer)
+          await writeFile(filePath, buffer, { mode: 0o644 })
 
-          // Add to photos list
           uploadedPhotos.push({
             id: uuidv4(),
             name: file.name,
@@ -65,19 +64,22 @@ export async function POST(request: Request) {
             section
           })
         } catch (fileError) {
-          console.error(`Error saving file ${fileName}:`, fileError)
-          throw new Error(`Failed to save file ${file.name}`)
+          console.error(`File write error for ${fileName}:`, fileError)
+          throw new Error(`Server storage error: Unable to save file ${file.name}`)
         }
       }
     }
 
-    // Update photos.json
+    // Update photos.json with proper error handling
     try {
       const updatedPhotos = [...existingPhotos, ...uploadedPhotos]
-      await writeFile(photosPath, JSON.stringify(updatedPhotos, null, 2), 'utf-8')
-    } catch (updateError) {
-      console.error('Error updating photos.json:', updateError)
-      throw new Error('Failed to update photos database')
+      await writeFile(photosPath, JSON.stringify(updatedPhotos, null, 2), { 
+        mode: 0o644, 
+        encoding: 'utf-8' 
+      })
+    } catch (error) {
+      console.error('Error updating photos database:', error)
+      throw new Error('Server error: Unable to update photos database')
     }
 
     return NextResponse.json({ 
@@ -88,7 +90,10 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Upload error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to upload photos' },
+      { 
+        error: error instanceof Error ? error.message : 'Failed to upload photos',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      },
       { status: 500 }
     )
   }

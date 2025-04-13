@@ -4,10 +4,11 @@ import path from 'path'
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
-    const { id } = params
+    // Ensure params is properly handled
+    const id = context.params.id
     const publicDir = path.join(process.cwd(), 'public')
     const photosPath = path.join(publicDir, 'photos.json')
     
