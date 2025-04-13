@@ -72,44 +72,74 @@ export default function PhotoAdd() {
       setIsUploading(true)
       
       try {
-        const formData = new FormData()
-        // Ensure each file is properly appended with a unique field name
-        Array.from(e.target.files).forEach((file, index) => {
-          formData.append(`file-${index}`, file)
-        })
-        formData.append('section', section)
-
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          // Remove the Content-Type header to let the browser set it with boundary
-          body: formData,
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || `Upload failed with status: ${response.status}`)
+        const uploadedPhotos = [];
+        const imgbbApiKey = '1bc43ebd0cb93474188f1d032f718b87';
+        
+        // Process each file one by one
+        for (let i = 0; i < e.target.files.length; i++) {
+          const file = e.target.files[i];
+          const formData = new FormData();
+          formData.append('image', file);
+          formData.append('key', imgbbApiKey);
+          
+          // Upload to ImgBB
+          const imgbbResponse = await fetch('https://api.imgbb.com/1/upload', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (!imgbbResponse.ok) {
+            throw new Error(`ImgBB upload failed for ${file.name}: ${imgbbResponse.statusText}`);
+          }
+          
+          const imgbbData = await imgbbResponse.json();
+          
+          if (!imgbbData.success) {
+            throw new Error(`ImgBB upload error for ${file.name}: ${imgbbData.error?.message || 'Unknown error'}`);
+          }
+          
+          // Create photo data with ImgBB URL
+          const photoData = {
+            id: imgbbData.data.id,
+            url: imgbbData.data.url,
+            name: file.name,
+            section: section,
+            // Store additional ImgBB data if needed
+            display_url: imgbbData.data.display_url,
+            delete_url: imgbbData.data.delete_url,
+            thumbnail: imgbbData.data.thumb?.url
+          };
+          
+          uploadedPhotos.push(photoData);
+          
+          // Save to your database
+          await fetch('/api/photos', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(photoData),
+          });
         }
-
-        const result = await response.json()
         
         toast({
           title: "Success",
           description: `${e.target.files.length} photos uploaded successfully`,
-        })
-        await fetchPhotos() // Ensure we wait for the photos to be fetched
+        });
+        await fetchPhotos(); // Refresh the photos list
       } catch (error: any) {
-        console.error('Error uploading files:', error)
+        console.error('Error uploading files:', error);
         toast({
           title: "Error",
           description: error.message || "Failed to upload photos",
           variant: "destructive",
-        })
+        });
       } finally {
-        setIsUploading(false)
-        e.target.value = ''
+        setIsUploading(false);
+        e.target.value = '';
       }
     }
-  }
+  };
 
   // Consolidated remove handler for both sections
   const removePhoto = async (id: string, section: 'section1' | 'section2') => {

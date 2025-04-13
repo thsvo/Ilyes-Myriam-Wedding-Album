@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server'
-import { unlink } from 'fs/promises'
-import path from 'path'
 import { connectToDatabase } from '@/lib/mongodb'
 import Photo from '@/models/Photo'
 
@@ -21,16 +19,10 @@ export async function DELETE(
       );
     }
 
-    // Delete the file from uploads directory
-    try {
-      const publicDir = path.join(process.cwd(), 'public');
-      const filePath = path.join(publicDir, photo.url);
-      await unlink(filePath);
-    } catch (error) {
-      console.error('Error deleting file:', error);
-      // Continue even if file deletion fails
-    }
-
+    // Note: ImgBB doesn't provide a direct API to delete images via API key
+    // If you need to delete from ImgBB, you would need to use the delete_url
+    // that was stored when the image was uploaded
+    
     // Delete from MongoDB
     await Photo.deleteOne({ id });
 

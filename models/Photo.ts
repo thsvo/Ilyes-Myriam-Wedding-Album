@@ -6,11 +6,11 @@ const PhotoSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
-  name: {
+  url: {
     type: String,
     required: true
   },
-  url: {
+  name: {
     type: String,
     required: true
   },
@@ -19,10 +19,17 @@ const PhotoSchema = new mongoose.Schema({
     required: true,
     enum: ['section1', 'section2']
   },
+  // Additional ImgBB fields
+  display_url: String,
+  delete_url: String,
+  thumbnail: String,
   createdAt: {
     type: Date,
     default: Date.now
   }
 });
 
-export default mongoose.models.Photo || mongoose.model('Photo', PhotoSchema);
+// Check if the model is already defined to prevent overwriting during hot reloads
+const Photo = mongoose.models.Photo || mongoose.model('Photo', PhotoSchema);
+
+export default Photo;

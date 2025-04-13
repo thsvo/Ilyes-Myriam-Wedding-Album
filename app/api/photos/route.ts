@@ -25,3 +25,30 @@ export async function GET() {
     )
   }
 }
+
+export async function POST(request: Request) {
+  try {
+    // Connect to MongoDB
+    await connectToDatabase()
+    
+    // Get photo data from request
+    const photoData = await request.json()
+    
+    // Save to MongoDB
+    await Photo.create(photoData)
+    
+    return NextResponse.json({ 
+      success: true, 
+      photo: photoData 
+    })
+  } catch (error) {
+    console.error('Error saving photo:', error)
+    return NextResponse.json(
+      { 
+        error: 'Failed to save photo',
+        details: process.env.NODE_ENV === 'production' ? undefined : error
+      },
+      { status: 500 }
+    )
+  }
+}
