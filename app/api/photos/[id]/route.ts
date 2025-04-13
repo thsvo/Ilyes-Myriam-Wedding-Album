@@ -1,77 +1,45 @@
 import { NextResponse } from 'next/server'
-import { readFile, writeFile, unlink, access } from 'fs/promises'
+import { unlink } from 'fs/promises'
 import path from 'path'
+import { connectToDatabase } from '@/lib/mongodb'
+import Photo from '@/models/Photo'
 
 export async function DELETE(
   request: Request,
   context: { params: { id: string } }
 ) {
   try {
-    // Ensure params is properly handled
-    const id = context.params.id
-    const publicDir = path.join(process.cwd(), 'public')
-    const photosPath = path.join(publicDir, 'photos.json')
+    await connectToDatabase();
+    const id = context.params.id;
     
-    // Check if photos.json exists
-    try {
-      await access(photosPath)
-    } catch (error) {
-      console.error('photos.json does not exist:', error)
-      return NextResponse.json(
-        { error: 'Photos database not found' },
-        { status: 404 }
-      )
-    }
-    
-    // Read photos.json
-    let photos = []
-    try {
-      const photosData = await readFile(photosPath, 'utf-8')
-      photos = photosData ? JSON.parse(photosData) : []
-    } catch (error) {
-      console.error('Error reading photos.json:', error)
-      return NextResponse.json(
-        { error: 'Failed to read photos database' },
-        { status: 500 }
-      )
-    }
-    
-    // Find the photo to delete
-    const photoToDelete = photos.find((photo: any) => photo.id === id)
-    if (!photoToDelete) {
+    // Find the photo in MongoDB
+    const photo = await Photo.findOne({ id });
+    if (!photo) {
       return NextResponse.json(
         { error: 'Photo not found' },
         { status: 404 }
-      )
+      );
     }
 
-    // Remove the file from uploads directory
+    // Delete the file from uploads directory
     try {
-      const filePath = path.join(publicDir, photoToDelete.url)
-      await unlink(filePath)
+      const publicDir = path.join(process.cwd(), 'public');
+      const filePath = path.join(publicDir, photo.url);
+      await unlink(filePath);
     } catch (error) {
-      console.error('Error deleting file:', error)
+      console.error('Error deleting file:', error);
       // Continue even if file deletion fails
     }
 
-    // Update photos.json
-    try {
-      const updatedPhotos = photos.filter((photo: any) => photo.id !== id)
-      await writeFile(photosPath, JSON.stringify(updatedPhotos, null, 2), 'utf-8')
-    } catch (error) {
-      console.error('Error updating photos.json:', error)
-      return NextResponse.json(
-        { error: 'Failed to update photos database' },
-        { status: 500 }
-      )
-    }
+    // Delete from MongoDB
+    await Photo.deleteOne({ id });
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Delete error:', error)
+    console.error('Delete error:', error);
     return NextResponse.json(
       { error: 'Failed to delete photo' },
       { status: 500 }
-    )
+    );
   }
 }

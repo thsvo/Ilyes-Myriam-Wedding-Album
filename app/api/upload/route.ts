@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server'
-import { writeFile, readFile, mkdir, access, constants } from 'fs/promises'
+import { writeFile, mkdir, access, constants } from 'fs/promises'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
+import { connectToDatabase } from '@/lib/mongodb'
+import Photo from '@/models/Photo'
 
 export async function POST(request: Request) {
   try {
+    // Connect to MongoDB
+    await connectToDatabase()
+    
     const formData = await request.formData()
     const section = formData.get('section') as string
     const uploadedPhotos = []
@@ -12,9 +17,8 @@ export async function POST(request: Request) {
     // Ensure paths are absolute and use correct separators
     const publicDir = path.join(process.cwd(), 'public')
     const uploadsDir = path.join(publicDir, 'uploads')
-    const photosPath = path.join(publicDir, 'photos.json')
 
-    console.log('Directories:', { publicDir, uploadsDir, photosPath })
+    console.log('Directories:', { publicDir, uploadsDir })
 
     // Ensure directories exist with proper permissions
     try {
@@ -44,27 +48,6 @@ export async function POST(request: Request) {
       }, { status: 500 })
     }
 
-    // Initialize or read photos.json with proper error handling
-    let existingPhotos = []
-    try {
-      try {
-        const photosData = await readFile(photosPath, 'utf-8')
-        existingPhotos = JSON.parse(photosData || '[]')
-        console.log('Successfully read photos.json')
-      } catch (readError) {
-        console.log('photos.json read error (creating new file):', readError)
-        // If file doesn't exist, create it with empty array
-        await writeFile(photosPath, '[]', { encoding: 'utf-8' })
-        console.log('Created new photos.json file')
-      }
-    } catch (error) {
-      console.error('Photos.json handling error:', error)
-      return NextResponse.json({ 
-        error: 'Server configuration error: Unable to manage photos database',
-        details: error
-      }, { status: 500 })
-    }
-
     // Process each uploaded file with better error handling
     for (const [key, value] of formData.entries()) {
       if (key.startsWith('file-') && value instanceof Blob) {
@@ -78,32 +61,22 @@ export async function POST(request: Request) {
           const buffer = Buffer.from(await file.arrayBuffer())
           await writeFile(filePath, buffer, { mode: 0o644 })
 
-          uploadedPhotos.push({
-            id: uuidv4(),
+          const photoId = uuidv4()
+          const photoData = {
+            id: photoId,
             name: file.name,
             url: `/uploads/${fileName}`,
             section
-          })
+          }
+
+          // Save to MongoDB
+          await Photo.create(photoData)
+          uploadedPhotos.push(photoData)
         } catch (fileError) {
           console.error(`File write error for ${fileName}:`, fileError)
           throw new Error(`Server storage error: Unable to save file ${file.name}`)
         }
       }
-    }
-
-    // Update photos.json with proper error handling
-    try {
-      const updatedPhotos = [...existingPhotos, ...uploadedPhotos]
-      await writeFile(photosPath, JSON.stringify(updatedPhotos, null, 2), { 
-        encoding: 'utf-8' 
-      })
-      console.log('Successfully updated photos.json')
-    } catch (error) {
-      console.error('Error updating photos database:', error)
-      return NextResponse.json({ 
-        error: 'Server error: Unable to update photos database',
-        details: error
-      }, { status: 500 })
     }
 
     return NextResponse.json({ 

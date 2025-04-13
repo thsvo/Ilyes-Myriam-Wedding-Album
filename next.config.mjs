@@ -12,6 +12,7 @@ try {
 }
 
 /** @type {import('next').NextConfig} */
+// Add this to your existing next.config.mjs
 const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
@@ -28,9 +29,8 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
     serverActions: true, // Enable server actions
-  },
-  // Add output configuration for standalone mode
-  output: 'standalone',
+    serverComponentsExternalPackages: ['mongoose']
+  }
 }
 
 if (userConfig) {

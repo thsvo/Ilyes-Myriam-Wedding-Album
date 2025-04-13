@@ -1,18 +1,26 @@
 import { NextResponse } from 'next/server'
-import fs from 'fs/promises'
-import path from 'path'
+import { connectToDatabase } from '@/lib/mongodb'
+import Photo from '@/models/Photo'
 
 export async function GET() {
   try {
-    const photosPath = path.join(process.cwd(), 'public', 'photos.json')
-    const photosData = await fs.readFile(photosPath, 'utf-8')
-    const photos = JSON.parse(photosData)
+    // Connect to MongoDB
+    await connectToDatabase()
     
-    return NextResponse.json({ photos })
+    // Fetch all photos from MongoDB
+    const photos = await Photo.find({}).sort({ createdAt: -1 }).lean()
+    
+    return NextResponse.json({ 
+      success: true, 
+      photos 
+    })
   } catch (error) {
-    console.error('Error reading photos:', error)
+    console.error('Error fetching photos:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch photos' },
+      { 
+        error: 'Failed to fetch photos',
+        details: process.env.NODE_ENV === 'production' ? undefined : error
+      },
       { status: 500 }
     )
   }
