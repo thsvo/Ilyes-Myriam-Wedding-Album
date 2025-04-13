@@ -73,6 +73,7 @@ export default function PhotoAdd() {
       
       try {
         const formData = new FormData()
+        // Ensure each file is properly appended with a unique field name
         Array.from(e.target.files).forEach((file, index) => {
           formData.append(`file-${index}`, file)
         })
@@ -80,11 +81,7 @@ export default function PhotoAdd() {
 
         const response = await fetch('/api/upload', {
           method: 'POST',
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0',
-          },
+          // Remove the Content-Type header to let the browser set it with boundary
           body: formData,
         })
 
@@ -207,7 +204,7 @@ export default function PhotoAdd() {
                     <div key={photo.id} className="relative group">
                       <div className="aspect-square bg-emerald-50 rounded-lg overflow-hidden">
                         <Image
-                          src={`${photo.url}?t=${new Date().getTime()}`}
+                          src={photo.url}
                           alt={photo.name}
                           width={300}
                           height={300}
