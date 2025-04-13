@@ -21,25 +21,16 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    domains: ['weddingim.codeopx.com'], // Add your domain here
   },
   experimental: {
-    serverActions: true,
+    webpackBuildWorker: true,
+    parallelServerBuildTraces: true,
+    parallelServerCompiles: true,
+    serverActions: true, // Enable server actions
   },
-  webpack: (config) => {
-    config.module.rules.push({
-      test: /\.(png|jpe?g|gif)$/i,
-      use: [
-        {
-          loader: 'file-loader',
-          options: {
-            publicPath: '/_next',
-            name: 'static/media/[name].[hash].[ext]',
-          },
-        },
-      ],
-    })
-    return config
-  },
+  // Add output configuration for standalone mode
+  output: 'standalone',
 }
 
 if (userConfig) {

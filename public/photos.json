@@ -6,18 +6,6 @@
     "section": "section1"
   },
   {
-    "id": "a9a53e61-079c-471f-8fe3-fda8eb97ec67",
-    "name": "stone-tower-winery-wedding-photos_0096.jpg",
-    "url": "/uploads/2030032e-a448-4787-9500-087b93fc2b8b-stone-tower-winery-wedding-photos_0096.jpg",
-    "section": "section1"
-  },
-  {
-    "id": "28a060d9-1c5d-4eab-931c-fd7261875bc0",
-    "name": "Backyard-horse-ranch-wedding-photos-Amy-Pinder-Photography_0072.jpg",
-    "url": "/uploads/7e024b80-b1f9-41e5-8b34-a6baa8b209e5-Backyard-horse-ranch-wedding-photos-Amy-Pinder-Photography_0072.jpg",
-    "section": "section1"
-  },
-  {
     "id": "c07994d5-8399-429a-8b06-3ee7d6fde376",
     "name": "stone-tower-winery-wedding-photos_0037.jpg",
     "url": "/uploads/ac466aff-abe9-4334-98c1-2fa2daf5d913-stone-tower-winery-wedding-photos_0037.jpg",
@@ -46,5 +34,11 @@
     "name": "photo-1591604466107-ec97de577aff.jpg",
     "url": "/uploads/053681ef-ce69-458b-abf4-aa924e691bef-photo-1591604466107-ec97de577aff.jpg",
     "section": "section2"
+  },
+  {
+    "id": "3216e1c0-22e5-496c-9e92-29dce9c73424",
+    "name": "the-barn-at-gravers-tree-farm-wedding-photos-1.jpg",
+    "url": "/uploads/f88901c2-486f-4fca-8279-b1398c387faa-the-barn-at-gravers-tree-farm-wedding-photos-1.jpg",
+    "section": "section1"
   }
 ]

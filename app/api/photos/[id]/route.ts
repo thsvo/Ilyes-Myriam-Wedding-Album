@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { readFile, writeFile, unlink } from 'fs/promises'
+import { readFile, writeFile, unlink, access } from 'fs/promises'
 import path from 'path'
 
 export async function DELETE(
@@ -8,16 +8,31 @@ export async function DELETE(
 ) {
   try {
     const { id } = params
-    const photosPath = path.join(process.cwd(), 'public', 'photos.json')
+    const publicDir = path.join(process.cwd(), 'public')
+    const photosPath = path.join(publicDir, 'photos.json')
     
-    // Initialize photos array if file doesn't exist
+    // Check if photos.json exists
+    try {
+      await access(photosPath)
+    } catch (error) {
+      console.error('photos.json does not exist:', error)
+      return NextResponse.json(
+        { error: 'Photos database not found' },
+        { status: 404 }
+      )
+    }
+    
+    // Read photos.json
     let photos = []
     try {
       const photosData = await readFile(photosPath, 'utf-8')
       photos = photosData ? JSON.parse(photosData) : []
     } catch (error) {
-      // If file doesn't exist or is empty, continue with empty array
-      await writeFile(photosPath, '[]', 'utf-8')
+      console.error('Error reading photos.json:', error)
+      return NextResponse.json(
+        { error: 'Failed to read photos database' },
+        { status: 500 }
+      )
     }
     
     // Find the photo to delete
@@ -31,15 +46,24 @@ export async function DELETE(
 
     // Remove the file from uploads directory
     try {
-      const filePath = path.join(process.cwd(), 'public', photoToDelete.url)
+      const filePath = path.join(publicDir, photoToDelete.url)
       await unlink(filePath)
     } catch (error) {
       console.error('Error deleting file:', error)
+      // Continue even if file deletion fails
     }
 
     // Update photos.json
-    const updatedPhotos = photos.filter((photo: any) => photo.id !== id)
-    await writeFile(photosPath, JSON.stringify(updatedPhotos, null, 2), 'utf-8')
+    try {
+      const updatedPhotos = photos.filter((photo: any) => photo.id !== id)
+      await writeFile(photosPath, JSON.stringify(updatedPhotos, null, 2), 'utf-8')
+    } catch (error) {
+      console.error('Error updating photos.json:', error)
+      return NextResponse.json(
+        { error: 'Failed to update photos database' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -32,34 +32,53 @@ export async function POST(request: Request) {
     try {
       const photosData = await readFile(photosPath, 'utf-8')
       existingPhotos = photosData ? JSON.parse(photosData) : []
-    } catch {
-      await writeFile(photosPath, '[]', 'utf-8')
+    } catch (error) {
+      console.error('Error reading photos.json:', error)
+      // If file doesn't exist or is empty, create it
+      try {
+        await writeFile(photosPath, '[]', 'utf-8')
+      } catch (writeError) {
+        console.error('Error creating photos.json:', writeError)
+        throw new Error('Failed to initialize photos.json')
+      }
     }
 
     // Process each uploaded file
     for (const [key, value] of formData.entries()) {
       if (key.startsWith('file-') && value instanceof Blob) {
         const file = value as File
-        const fileName = `${uuidv4()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
+        // Sanitize filename to avoid path traversal and special characters
+        const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+        const fileName = `${uuidv4()}-${safeFileName}`
         const filePath = path.join(uploadsDir, fileName)
         
-        // Save file
-        const buffer = Buffer.from(await file.arrayBuffer())
-        await writeFile(filePath, buffer)
+        try {
+          // Save file to uploads directory
+          const buffer = Buffer.from(await file.arrayBuffer())
+          await writeFile(filePath, buffer)
 
-        // Add to photos list
-        uploadedPhotos.push({
-          id: uuidv4(),
-          name: file.name,
-          url: `/uploads/${fileName}`,
-          section
-        })
+          // Add to photos list
+          uploadedPhotos.push({
+            id: uuidv4(),
+            name: file.name,
+            url: `/uploads/${fileName}`,
+            section
+          })
+        } catch (fileError) {
+          console.error(`Error saving file ${fileName}:`, fileError)
+          throw new Error(`Failed to save file ${file.name}`)
+        }
       }
     }
 
     // Update photos.json
-    const updatedPhotos = [...existingPhotos, ...uploadedPhotos]
-    await writeFile(photosPath, JSON.stringify(updatedPhotos, null, 2), 'utf-8')
+    try {
+      const updatedPhotos = [...existingPhotos, ...uploadedPhotos]
+      await writeFile(photosPath, JSON.stringify(updatedPhotos, null, 2), 'utf-8')
+    } catch (updateError) {
+      console.error('Error updating photos.json:', updateError)
+      throw new Error('Failed to update photos database')
+    }
 
     return NextResponse.json({ 
       success: true, 
@@ -69,7 +88,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Upload error:', error)
     return NextResponse.json(
-      { error: 'Failed to upload photos' },
+      { error: error instanceof Error ? error.message : 'Failed to upload photos' },
       { status: 500 }
     )
   }
